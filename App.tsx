@@ -1,118 +1,79 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, { useEffect, useState } from 'react';
+import { View, Text, Button, Alert } from 'react-native';
+import messaging from '@react-native-firebase/messaging';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+const App = () => {
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  useEffect(() => {
+    // 🔹 Récupérer le token FCM de l'appareil
+    const getToken = async () => {
+      try {
+        const token = await messaging().getToken();
+        setFcmToken(token);
+        console.log('🔥 FCM Token:', token);
+      } catch (error) {
+        console.error('❌ Erreur lors de la récupération du token FCM:', error);
+      }
+    };
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+    getToken();
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+    // 🔹 Écoute des notifications en premier plan
+    const unsubscribeOnMessage = messaging().onMessage(async remoteMessage => {
+      console.log('📩 Notification reçue en premier plan:', remoteMessage);
+      Alert.alert(
+        remoteMessage.notification?.title || 'Notification',
+        remoteMessage.notification?.body || 'Vous avez une nouvelle notification'
+      );
+    });
+
+    // 🔹 Gérer les clics sur les notifications (app en arrière-plan)
+    const unsubscribeOnNotificationOpenedApp = messaging().onNotificationOpenedApp(remoteMessage => {
+      console.log('📌 Notification cliquée (appli en arrière-plan):', remoteMessage);
+      Alert.alert(
+        'Notification cliquée',
+        remoteMessage.notification?.body || 'Vous avez cliqué sur une notification'
+      );
+    });
+
+    // 🔹 Vérifier si l'app a été ouverte via une notification
+    messaging()
+      .getInitialNotification()
+      .then(remoteMessage => {
+        if (remoteMessage) {
+          console.log('🚀 App ouverte par une notification:', remoteMessage);
+          Alert.alert(
+            'App ouverte par une notification',
+            remoteMessage.notification?.body || 'Vous avez ouvert l\'app via une notification'
+          );
+        }
+      });
+
+    return () => {
+      unsubscribeOnMessage();
+      unsubscribeOnNotificationOpenedApp();
+    };
+  }, []);
+
+  // 🔹 Gestion des notifications en arrière-plan
+  useEffect(() => {
+    messaging().setBackgroundMessageHandler(async remoteMessage => {
+      console.log('🌙 Notification reçue en arrière-plan:', remoteMessage);
+      // Vous pouvez afficher une notification locale ici si nécessaire
+    });
+  }, []);
+
   return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text style={{ fontSize: 18, fontWeight: 'bold' }}>React Native FCM (Android)</Text>
+      {fcmToken && <Text style={{ fontSize: 14, marginTop: 10 }}>FCM Token: {fcmToken}</Text>}
+      <Button
+        title="Afficher le Token"
+        onPress={() => Alert.alert('FCM Token', fcmToken || 'Token non disponible')}
+      />
     </View>
   );
-}
-
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
-
-  return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
+};
 
 export default App;
