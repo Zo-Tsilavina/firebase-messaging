@@ -60,7 +60,6 @@ const App = () => {
   useEffect(() => {
     messaging().setBackgroundMessageHandler(async remoteMessage => {
       console.log('🌙 Notification reçue en arrière-plan:', remoteMessage);
-      // Vous pouvez afficher une notification locale ici si nécessaire
     });
   }, []);
 

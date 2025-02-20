@@ -1,0 +1,5 @@
+appId: com.exo1
+---
+- launchApp
+- tapOn: "Afficher le Token"
+- assertVisible: "FCM Token"
